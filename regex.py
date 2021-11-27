@@ -12,6 +12,10 @@
 #       - outputs each string and whether it is accepted to the command line
 ###
 
+KNOWNOPS = '*+()'
+LOWERALPHABET = 'abcdefghijklmnopqrstuvwxyz'
+UPPERALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
 def main():
 
     # initilizing our file variables
@@ -28,7 +32,9 @@ def main():
         inputstrs.append(line.strip())
     
     # TODO: check the input strings and regex to make sure they are valid
-
+    if not checkforvalidinput(regex,inputstrs):
+        print("Invalid input!")
+        return 1
     # running our regex against all of the strings
     for input in inputstrs:
         #run each input on the regex
@@ -67,27 +73,17 @@ def run(regex,str):
 
     for token in parsedreg:
         print(token)
-    '''
-    for token in parsedreg:
-        
-        if token == "(":
-            passing = processgroup(token[1:-2] + token[-1],currstr)
-            if not passing:
-                return False
-        elif token[-1] == "*":
-            passing, currstr = processstar(token[0:-1],currstr)
-            if not passing:
-                return False
-        elif token[-1] == "+":
-            passing, currstr = processplus(token[0:-1],currstr)
-            if not passing:
-                return False
-        else:
-            passing, currstr = processtext(token,currstr)
-            if not passing:
-                return False
-    #TODO: Do something about left over chars
-    '''
+        if token[1] == 'n':
+            passing, currstr = processtext(token[0],currstr)
+        elif token[1] == 's':
+            passing, currstr = processstar(token[0],currstr)
+        elif token[1] == 'p':
+            passing, currstr = processplus(token[0],currstr)
+        elif token[1] == 'gs':
+            passing, currstr = processgroup(token[0],currstr)
+    
+    if len(currstr) > 0:
+        passing = False
     return passing
 
 def processstar(token,str):
@@ -102,11 +98,15 @@ def processplus(token,str):
         once = True
     return once, str
 
+#checks if the given text is in the string
 def processtext(token,str):
     if str[0:len(token)] == token:
         return True, str[len(token):]
     else:
         return False, str
+
+#def processgroupstar(token,str):
+#    str = processstar()
 
 def processgroup(token,str):
     print(token)
@@ -114,40 +114,80 @@ def processgroup(token,str):
 
 
 def parseregex(regex):
-    reg = [()]
+    reg = []
     buf = ""
-    ingroup = False
-    cutnext = False
+    groupbuf = False
+    groupopp = False
+    # n -> no opp
+    # s -> star  *
+    # p -> plus  +
+    # g -> group ()
     for letter in regex:
-        if ingroup or cutnext:
-            if letter == ')':
-                ingroup = False
-                cutnext = True
-                buf += letter
-            elif cutnext:
-                buf += letter
-                reg.append(buf)
-                buf = ""
-                cutnext = False    
+        #print(letter + ", " + buf + ", " + str(groupbuf) + ", " + str(groupopp))
+        if letter == ")":
+            groupbuf = False
+            groupopp = True
+        elif groupbuf:
+            buf += letter
+        elif letter == "*":
+            if groupopp:
+                reg.append((buf,'gs'))
             else:
-                buf += letter
+                if len(buf) > 1:
+                    reg.append((buf[:-1],'n'))
+                reg.append((buf[-1],'s'))
+            buf = ""
+        elif letter == "+":
+            if groupopp:
+                reg.append((buf,'gp'))
+            else:
+                if len(buf) > 1:
+                    reg.append((buf[:-1],'n'))
+                reg.append((buf[-1],'p'))
+            buf = ""
+        elif letter == "(":
+            groupbuf = True
+            reg.append((buf,'n'))
+            buf = ""
         else:
-            if letter == "*" or letter == "+":
-                if(len(buf) > 1): 
-                    reg.append(buf[0:-1],'n')
-                reg.append((buf[-1],'*'))
-                buf = ""
-            elif letter == "(":
-                ingroup = True
-                if(len(buf) > 0):
-                    reg.append((buf,'g'))
-                buf = letter
-            else:
-                buf += letter
+            if groupopp:
+                reg.append((buf,'n'))
+            buf += letter
+    
+    if len(buf) > 0:
+        reg.append((buf,'n'))
 
-    if(len(buf) > 0):
-        reg.append(buf)
     return reg
+
+def checkforvalidinput(regex,inputstrs):
+    #first check the regex
+    #can have any letter from all three of our alphabets
+    pcount = 0
+    for letter in regex:
+        if letter not in KNOWNOPS and\
+            letter not in LOWERALPHABET and\
+            letter not in UPPERALPHABET:
+            return False
+        #also make sure there are an even number of parenthesis
+        if letter == ')':
+            pcount -=1
+        elif letter == '(':
+            pcount +=1
+        if pcount < 0:
+            return False
+    if pcount != 0:
+        return False
+
+    #then check all of the input strings
+    #can only have letters from our 2 alphabets
+    for str in inputstrs:
+        for letter in str:
+            if letter not in LOWERALPHABET and\
+                letter not in UPPERALPHABET:
+
+                return False
+
+    return True
 
 if __name__ == "__main__":
     main()
