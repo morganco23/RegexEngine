@@ -48,9 +48,9 @@ def main():
             outcome = False
         if outcome:
             # TODO: adjust the print statements
-            print("\n" , input, "\t\t\tis in the regex:", regex)
+            print("\n"+input+"\tis in the regex:", regex)
         else:
-            print("\n", input, "\t\t\tis not the regex:", regex)
+            print("\n"+input+"\tis not the regex:", regex)
     
     # cleaning up
     inputs.close()
@@ -83,8 +83,8 @@ def run(regex,str):
         if shouldpass:
             continue
         c += 1
-        print(token)
-        print(currstr)
+        #print(token)
+        #print(currstr)
         if token[1] == 'n':
             tpassing, currstr = processtext(token[0],currstr)
         elif token[1] == 's':
@@ -158,7 +158,7 @@ def processorplus(token, str):
     return c > 1, output
 
 ##
-#processorstar
+#processgroupplus
 #
 #description: processes a string given the specified token
 #
@@ -183,7 +183,7 @@ def processgroupplus(token,str):
     return c > 1, output
 
 ##
-#processorstar
+#processgroupor
 #
 #description: processes a string given the specified token
 #
@@ -198,7 +198,7 @@ def processgroupor(token,str):
     return run(token, str)
 
 ##
-#processorstar
+#processstar
 #
 #description: processes a string given the specified token
 #
@@ -215,7 +215,7 @@ def processstar(token,str):
     return True, str
 
 ##
-#processorstar
+#processplus
 #
 #description: processes a string given the specified token
 #
@@ -233,6 +233,18 @@ def processplus(token,str):
         once = True
     return once, str
 
+##
+#processor
+#
+#description: processes a string given the specified token
+#
+#Parameters
+#   -str    the string to process
+#   -token  the token to use
+#
+#return:
+#   -the boolean output of whether or not it was able to be processed
+#   -the remaining string to be processed in the next token
 def processor(passing, regex, str):
     print(passing, regex,str,"asd")
     secondpassing, stext = run(regex,str)
@@ -255,9 +267,19 @@ def processtext(token,str):
     else:
         return False, str
 
-#def processgroupstar(token,str):
-#    str = processstar()
 
+##
+#processgroupstar
+#
+#description: processes a string given the specified token
+#
+#Parameters
+#   -str    the string to process
+#   -token  the token to use
+#
+#return:
+#   -the boolean output of whether or not it was able to be processed
+#   -the remaining string to be processed in the next token
 def processgroupstar(token,str):
     prevoutputlen = len(str) + 1
     outputlen = len(str)
