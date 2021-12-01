@@ -8,11 +8,17 @@
 #       - takes in test inputs as \n separated text in a txt file
 #       - takes in the regex as a single string in a txt file
 #           - The following expressions are supported:
-#               * + [] ()
+#               * + () |
 #       - outputs each string and whether it is accepted to the command line
+#
+# known bugs:
+#   -a character followed by a star and then the same character after it will
+#       most likely return false
+#       A way around this is to refrain from this/rework your regex to make it
+#       have the stars as far back as possible
 ###
 
-KNOWNOPS = '*+()'
+KNOWNOPS = '*+()|'
 LOWERALPHABET = 'abcdefghijklmnopqrstuvwxyz'
 UPPERALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
@@ -25,25 +31,26 @@ def main():
     # reading the strings from the files to local variables
     regex = expr.readline()
 
-    
-
     inputstrs = []
     for line in inputs:
         inputstrs.append(line.strip())
     
-    # TODO: check the input strings and regex to make sure they are valid
     if not checkforvalidinput(regex,inputstrs):
         print("Invalid input!")
         return 1
+    
     # running our regex against all of the strings
     for input in inputstrs:
         #run each input on the regex
         #print the output
-        if run(regex,input):
+        outcome, rtxt = run(regex,input)
+        if len(rtxt) > 0:
+            outcome = False
+        if outcome:
             # TODO: adjust the print statements
-            print(input, "\t\t\tis in the regex:", regex)
+            print("\n" , input, "\t\t\tis in the regex:", regex)
         else:
-            print(input, "\t\t\tis not the regex:", regex)
+            print("\n", input, "\t\t\tis not the regex:", regex)
     
     # cleaning up
     inputs.close()
@@ -70,27 +77,155 @@ def run(regex,str):
     passing = True
 
     parsedreg = parseregex(regex)
-
+    c = 0
+    shouldpass = False
     for token in parsedreg:
+        if shouldpass:
+            continue
+        c += 1
         print(token)
+        print(currstr)
         if token[1] == 'n':
-            passing, currstr = processtext(token[0],currstr)
+            tpassing, currstr = processtext(token[0],currstr)
         elif token[1] == 's':
-            passing, currstr = processstar(token[0],currstr)
+            tpassing, currstr = processstar(token[0],currstr)
         elif token[1] == 'p':
-            passing, currstr = processplus(token[0],currstr)
+            tpassing, currstr = processplus(token[0],currstr)
         elif token[1] == 'gs':
-            passing, currstr = processgroup(token[0],currstr)
-    
-    if len(currstr) > 0:
-        passing = False
-    return passing
+            tpassing, currstr = processgroupstar(token[0],currstr)
+        elif token[1] == 'gp':
+            tpassing, currstr = processgroupplus(token[0],currstr)
+        elif token[1] == 'gos':
+            tpassing, currstr = processorstar( currstr, token[0])
+        elif token[1] == 'gop':
+            tpassing, currstr = processorplus( token[0],currstr)
+        elif token[1] == 'o':
+            tpassing, currstr= processor(passing, parsedreg[c:],currstr)
+            shouldpass = True
+            
+        elif token[1] == 'go':
+            tpassing, currstr = processgroupor(token[0],currstr)
 
+        if (not passing) or (not tpassing):
+            passing = False
+
+
+    return passing, currstr
+
+##
+#processorstar
+#
+#description: processes a string given the specified token
+#
+#Parameters
+#   -str    the string to process
+#   -token  the token to use
+#
+#return:
+#   -the boolean output of whether or not it was able to be processed
+#   -the remaining string to be processed in the next token
+def processorstar(str,token):
+    prevoutputlen = len(str) + 1
+    outputlen = len(str)
+    output = str
+    while prevoutputlen != outputlen :
+        outcome, output = run(token,output)
+        prevoutputlen = outputlen
+        outputlen = len(output)
+    return True, output
+##
+#processorplus
+#
+#description: processes a string given the specified token
+#
+#Parameters
+#   -str    the string to process
+#   -token  the token to use
+#
+#return:
+#   -the boolean output of whether or not it was able to be processed
+#   -the remaining string to be processed in the next token
+def processorplus(token, str):
+    c = 0
+    prevoutputlen = len(str) + 1
+    outputlen = len(str)
+    output = str
+    while prevoutputlen != outputlen :
+        c += 1
+        outcome, output = run(token,output)
+        prevoutputlen = outputlen
+        outputlen = len(output)
+    return c > 1, output
+
+##
+#processorstar
+#
+#description: processes a string given the specified token
+#
+#Parameters
+#   -str    the string to process
+#   -token  the token to use
+#
+#return:
+#   -the boolean output of whether or not it was able to be processed
+#   -the remaining string to be processed in the next token
+def processgroupplus(token,str):
+    print(token)
+    c = 0
+    prevoutputlen = len(str) + 1
+    outputlen = len(str)
+    output = str
+    while prevoutputlen != outputlen :
+        c += 1
+        outcome, output = run(token,output)
+        prevoutputlen = outputlen
+        outputlen = len(output)
+    return c > 1, output
+
+##
+#processorstar
+#
+#description: processes a string given the specified token
+#
+#Parameters
+#   -str    the string to process
+#   -token  the token to use
+#
+#return:
+#   -the boolean output of whether or not it was able to be processed
+#   -the remaining string to be processed in the next token
+def processgroupor(token,str):
+    return run(token, str)
+
+##
+#processorstar
+#
+#description: processes a string given the specified token
+#
+#Parameters
+#   -str    the string to process
+#   -token  the token to use
+#
+#return:
+#   -the boolean output of whether or not it was able to be processed
+#   -the remaining string to be processed in the next token
 def processstar(token,str):
     while str[0:len(token)] == token:
         str = str[len(token):]
     return True, str
 
+##
+#processorstar
+#
+#description: processes a string given the specified token
+#
+#Parameters
+#   -str    the string to process
+#   -token  the token to use
+#
+#return:
+#   -the boolean output of whether or not it was able to be processed
+#   -the remaining string to be processed in the next token
 def processplus(token,str):
     once = False
     while str[0:len(token)] == token:
@@ -98,7 +233,22 @@ def processplus(token,str):
         once = True
     return once, str
 
-#checks if the given text is in the string
+def processor(passing, regex, str):
+    print(passing, regex,str,"asd")
+    secondpassing, stext = run(regex,str)
+    if passing and secondpassing:
+        if len(str) > len(stext):
+            return True, stext
+        else:
+            return True, str
+    elif passing:
+        return True, str
+    elif secondpassing:
+        return True, stext
+    else:
+        return False, str
+
+#checks if the given text is at the beginning of the string
 def processtext(token,str):
     if str[0:len(token)] == token:
         return True, str[len(token):]
@@ -108,30 +258,53 @@ def processtext(token,str):
 #def processgroupstar(token,str):
 #    str = processstar()
 
-def processgroup(token,str):
-    print(token)
-    return run(token,str)
+def processgroupstar(token,str):
+    prevoutputlen = len(str) + 1
+    outputlen = len(str)
+    output = str
+    while prevoutputlen != outputlen :
+        outcome, output = run(token,output)
+        prevoutputlen = outputlen
+        outputlen = len(output)
+        
+    return True, output
 
 
 def parseregex(regex):
+    if isinstance(regex[0], tuple):
+        return regex
     reg = []
     buf = ""
     groupbuf = False
     groupopp = False
+    seenor = False
+    pcount = 0
     # n -> no opp
     # s -> star  *
     # p -> plus  +
     # g -> group ()
+    #print("the regex is: " + regex)
     for letter in regex:
+        #print(groupopp, seenor)
         #print(letter + ", " + buf + ", " + str(groupbuf) + ", " + str(groupopp))
-        if letter == ")":
+        if letter == ")" and pcount == 0:
             groupbuf = False
             groupopp = True
         elif groupbuf:
             buf += letter
+            if letter == '|':
+                seenor = True
+            elif letter == '(':
+                pcount += 1
+            elif letter == ')':
+                pcount -= 1
         elif letter == "*":
             if groupopp:
-                reg.append((buf,'gs'))
+                if seenor:
+                    reg.append((buf,'gos'))
+                    seenor = False
+                else:
+                    reg.append((buf,'gs'))
             else:
                 if len(buf) > 1:
                     reg.append((buf[:-1],'n'))
@@ -139,24 +312,41 @@ def parseregex(regex):
             buf = ""
         elif letter == "+":
             if groupopp:
-                reg.append((buf,'gp'))
+                if seenor:
+                    reg.append((buf,'gop'))
+                    seenor = False
+                else:
+                    reg.append((buf,'gp'))
             else:
-                if len(buf) > 1:
+                if len(buf) > 0:
                     reg.append((buf[:-1],'n'))
                 reg.append((buf[-1],'p'))
             buf = ""
         elif letter == "(":
             groupbuf = True
-            reg.append((buf,'n'))
+            if len(buf) > 0:
+                reg.append((buf,'n'))
             buf = ""
+        elif letter == "|":
+            if len(buf) > 0:
+                reg.append((buf,'n'))
+                buf = ""
+            reg.append((letter,'o'))
         else:
             if groupopp:
-                reg.append((buf,'n'))
+                if seenor:
+                    reg.append((buf,'go'))
+                else:
+                    if len(buf) > 0:
+                        reg.append((buf,'n'))
+                groupopp = False
+                buf = ""
             buf += letter
     
     if len(buf) > 0:
         reg.append((buf,'n'))
 
+    print(reg)
     return reg
 
 def checkforvalidinput(regex,inputstrs):

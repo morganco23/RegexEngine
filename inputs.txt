@@ -1,4 +1,1 @@
-aaa
-aa
-baaaab
-aba
+aababa
